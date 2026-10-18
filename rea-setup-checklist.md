@@ -7,11 +7,11 @@
 
 ## 0. 前置判断(先定宿主,决定走哪条 provider)
 
-| 你的宿主 | 深分析 provider | 成熟度 |
-|---|---|---|
-| **Linux x64** | **Ghidra**(推荐) | REA 唯一正式支持的深分析平台 |
-| macOS | Hopper | 唯一支持 GUI 写入 / `.hop` |
-| Windows x64 | Ghidra | **实验性 P0**,仅限原生 x86-64 PE,无 GUI / 无写入 |
+| 你的宿主      | 深分析 provider  | 成熟度                                           |
+| ------------- | ---------------- | ------------------------------------------------ |
+| **Linux x64** | **Ghidra**(推荐) | REA 唯一正式支持的深分析平台                     |
+| macOS         | Hopper           | 唯一支持 GUI 写入 / `.hop`                       |
+| Windows x64   | Ghidra           | **实验性 P0**,仅限原生 x86-64 PE,无 GUI / 无写入 |
 
 REA **不负责**的前置(属于你自己):
 
@@ -31,6 +31,7 @@ npm  --version
 ```
 
 > 最常见坑:仓库 `.npmrc` 设了 `engine-strict=true`,Node 版本不符会直接 `EBADENGINE` 卡死 `npm ci`。
+>
 > - 反例:Node **24.1.0** 不满足(既不在 22.x,又 `< 24.11.0`)
 > - 安全选择:`22.19.0`、`22.20.x`,或 `>=24.11.0`
 
@@ -54,10 +55,10 @@ node scripts/rea.mjs doctor --json   # 首次自检
 
 ## 3A. Ghidra 路线(Linux x64,推荐)
 
-| 要求 | 值 | 说明 |
-|---|---|---|
-| Ghidra | **12.1.2**(精确) | 版本不符会被拒绝 |
-| JDK | **21**(64 位完整 JDK) | 硬约束,`25` 不被接受 |
+| 要求   | 值                    | 说明                 |
+| ------ | --------------------- | -------------------- |
+| Ghidra | **12.1.2**(精确)      | 版本不符会被拒绝     |
+| JDK    | **21**(64 位完整 JDK) | 硬约束,`25` 不被接受 |
 
 ```bash
 # 假设已解压 Ghidra 12.1.2 与 JDK 21
@@ -79,23 +80,25 @@ export HOPPER_TARGET_PATH=/abs/path/target        # 可选;target-free 会话改
 
 ## 4. 环境变量清单(本任务最小集)
 
-| 变量 | 必需性 | 用途 |
-|---|---|---|
-| `GHIDRA_INSTALL_DIR` | ✅(Ghidra 路线) | 指向解压后的 Ghidra 12.1.2 |
-| `JAVA_HOME` | ✅(Ghidra 路线) | 指向 **JDK 21** |
-| `REA_ANALYSIS_PROVIDER` | 可选 | 固定为 `ghidra`(默认 `auto`) |
-| `HOPPER_LAUNCHER_PATH` | Hopper 路线必需 | Hopper 可执行文件路径 |
-| `REA_INVESTIGATION_INPUT_ROOTS_JSON` | 可选 | 授权用于静态分析的绝对根目录 |
-| `REA_ILSPY_CMD_PATH` | 可选 | 仅 .NET managed 分析,本任务无关 |
+| 变量                                 | 必需性          | 用途                            |
+| ------------------------------------ | --------------- | ------------------------------- |
+| `GHIDRA_INSTALL_DIR`                 | ✅(Ghidra 路线) | 指向解压后的 Ghidra 12.1.2      |
+| `JAVA_HOME`                          | ✅(Ghidra 路线) | 指向 **JDK 21**                 |
+| `REA_ANALYSIS_PROVIDER`              | 可选            | 固定为 `ghidra`(默认 `auto`)    |
+| `HOPPER_LAUNCHER_PATH`               | Hopper 路线必需 | Hopper 可执行文件路径           |
+| `REA_INVESTIGATION_INPUT_ROOTS_JSON` | 可选            | 授权用于静态分析的绝对根目录    |
+| `REA_ILSPY_CMD_PATH`                 | 可选            | 仅 .NET managed 分析,本任务无关 |
 
 ---
 
 ## 5. 自检命令(按顺序)
 
 ```bash
-node scripts/rea.mjs doctor --json      # 期望:ghidra 变 OK(node / host 本就应 OK)
-node scripts/rea.mjs providers --json   # 期望:analysis_provider_binding != null
+node scripts/rea.mjs doctor --json      # 期望:ghidra 各检查项全 OK
+node scripts/rea.mjs providers --json   # 期望:analysis_provider_candidates 里 ghidra 为 available
 ```
+
+> 注意:`providers` 在无目标(target-free)时 `analysis_provider_binding` **恒为 null**,这是设计如此(绑定是 per-target 会话行为);判断 provider 是否可用要看 `analysis_provider_candidates`,不要看 binding。
 
 `doctor` 里这两条**可以先不管**(与二进制分析无关):
 
@@ -136,11 +139,11 @@ npm run config:print -- /path/to/decrypted-elf
 
 ## 9. 快速排查表
 
-| 症状 | 原因 | 处理 |
-|---|---|---|
-| `npm ci` → `EBADENGINE` | Node 版本不符 + `engine-strict=true` | 切到 `22.19.0` 或 `>=24.11.0` |
-| `compiled runtime is missing` | 没构建 | `npm run build` |
-| `doctor` ghidra `not_configured` | `GHIDRA_INSTALL_DIR` 未设 | 设置后复验 |
-| `doctor` ghidra 仍失败 | JDK 不是 **21**(如 25) | 换 JDK 21,设 `JAVA_HOME` |
-| 版本不符被拒 | Ghidra 不是 **12.1.2** | 换精确版本 |
-| Windows 上深分析异常 | P0 实验性,仅 PE | 改用 Linux x64 + Ghidra |
+| 症状                             | 原因                                 | 处理                          |
+| -------------------------------- | ------------------------------------ | ----------------------------- |
+| `npm ci` → `EBADENGINE`          | Node 版本不符 + `engine-strict=true` | 切到 `22.19.0` 或 `>=24.11.0` |
+| `compiled runtime is missing`    | 没构建                               | `npm run build`               |
+| `doctor` ghidra `not_configured` | `GHIDRA_INSTALL_DIR` 未设            | 设置后复验                    |
+| `doctor` ghidra 仍失败           | JDK 不是 **21**(如 25)               | 换 JDK 21,设 `JAVA_HOME`      |
+| 版本不符被拒                     | Ghidra 不是 **12.1.2**               | 换精确版本                    |
+| Windows 上深分析异常             | P0 实验性,仅 PE                      | 改用 Linux x64 + Ghidra       |
